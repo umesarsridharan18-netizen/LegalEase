@@ -5,6 +5,17 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 
+st.write("DEBUG - ROOT:", str(ROOT_DIR))
+st.write("DEBUG - ROOT EXISTS:", ROOT_DIR.exists())
+st.write("DEBUG - BACKEND EXISTS:", (ROOT_DIR / "backend").exists())
+st.write("DEBUG - BACKEND PATH:", str(ROOT_DIR / "backend"))
+
+from backend.services.document_service import (
+    format_docx,
+    format_pdf,
+    format_txt,
+)
+
 from backend.services.document_service import format_docx, format_pdf, format_txt
 from backend.utils.text_utils import text_to_html
 
