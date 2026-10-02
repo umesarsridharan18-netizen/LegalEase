@@ -1,20 +1,35 @@
-import html
 import os
+import sys
+from pathlib import Path
 
-import requests
+# Add project root to Python path
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 import streamlit as st
 from dotenv import load_dotenv
 
+# Debug information
 st.write("DEBUG - ROOT:", str(ROOT_DIR))
 st.write("DEBUG - ROOT EXISTS:", ROOT_DIR.exists())
 st.write("DEBUG - BACKEND EXISTS:", (ROOT_DIR / "backend").exists())
 st.write("DEBUG - BACKEND PATH:", str(ROOT_DIR / "backend"))
+
+# Load local .env
+load_dotenv(ROOT_DIR / ".env")
+
+# Import LegalEase modules
+from backend.ai_core.gemini_generator import GeminiDocumentGenerator
 
 from backend.services.document_service import (
     format_docx,
     format_pdf,
     format_txt,
 )
+
+from backend.utils.text_utils import text_to_html
 
 from backend.services.document_service import format_docx, format_pdf, format_txt
 from backend.utils.text_utils import text_to_html
