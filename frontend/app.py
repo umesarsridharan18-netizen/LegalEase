@@ -2,223 +2,220 @@ import os
 import sys
 from pathlib import Path
 
-# Add project root to Python path
+import streamlit as st
+from dotenv import load_dotenv
+
+# Project root
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-import streamlit as st
-from dotenv import load_dotenv
-
-# Debug information
-st.write("DEBUG - ROOT:", str(ROOT_DIR))
-st.write("DEBUG - ROOT EXISTS:", ROOT_DIR.exists())
-st.write("DEBUG - BACKEND EXISTS:", (ROOT_DIR / "backend").exists())
-st.write("DEBUG - BACKEND PATH:", str(ROOT_DIR / "backend"))
-
 # Load local .env
 load_dotenv(ROOT_DIR / ".env")
 
-# Import LegalEase modules
+# LegalEase modules
 from backend.ai_core.gemini_generator import GeminiDocumentGenerator
-
 from backend.services.document_service import (
     format_docx,
     format_pdf,
     format_txt,
 )
-
 from backend.utils.text_utils import text_to_html
 
-from backend.services.document_service import format_docx, format_pdf, format_txt
-from backend.utils.text_utils import text_to_html
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-load_dotenv(os.path.join(ROOT_DIR, ".env"))
-
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
-
+# Page configuration
 st.set_page_config(
-    page_title="LegalEase",
+    page_title="LegalEase - AI Legal Document Generator",
     page_icon="⚖️",
     layout="wide",
 )
 
-st.markdown(
-    """
-    <style>
-    .hero {
-        padding: 22px 28px;
-        border-radius: 18px;
-        background: linear-gradient(135deg, #111827, #1f2937);
-        color: white;
-        margin-bottom: 20px;
-    }
-    .hero h1 { margin: 0; font-size: 2.4rem; }
-    .hero p { margin: 8px 0 0; color: #d1d5db; }
-    .preview {
-        background: #111827;
-        color: #f9fafb;
-        border-radius: 14px;
-        padding: 24px;
-        max-height: 620px;
-        overflow-y: auto;
-        border: 1px solid #374151;
-    }
-    .preview p { line-height: 1.65; }
-    .small-note { color: #6b7280; font-size: 0.9rem; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
-st.markdown(
-    """
-    <div class="hero">
-        <h1>⚖️ LegalEase</h1>
-        <p>AI-Powered Legal Document Generator</p>
-    </div>
-    """,
-    unsafe_allow_html=True,
+# Title
+st.title("⚖️ LegalEase")
+st.subheader("AI-Powered Legal Document Generator")
+
+st.write(
+    "Create professional legal document drafts using the information "
+    "you provide."
 )
 
 st.info(
-    "LegalEase creates editable legal-document drafts. Review important documents "
-    "with a qualified legal professional before relying on them."
+    "LegalEase generates AI-assisted legal document drafts. "
+    "Please review the generated document before using it."
 )
 
-left, right = st.columns([0.95, 1.25], gap="large")
 
-with left:
-    st.subheader("Document Details")
+# Sidebar
+with st.sidebar:
+    st.header("About LegalEase")
 
-    document_type = st.text_input(
-        "Document Type",
-        placeholder="Example: Freelance Work Contract",
+    st.write(
+        "LegalEase helps generate customizable legal document drafts "
+        "such as contracts, agreements, NDAs and lease documents."
     )
 
-    parties = st.text_area(
-        "Parties Involved",
-        height=110,
-        placeholder="Example: Jane Doe (Service Provider), TechNova Inc. (Client)",
+    st.divider()
+
+    st.write("**Technology**")
+    st.write("• Python")
+    st.write("• Streamlit")
+    st.write("• FastAPI")
+    st.write("• Google Gemini")
+
+
+# Input section
+st.header("📄 Document Details")
+
+document_type = st.text_input(
+    "Document Type",
+    placeholder="Example: Freelance Work Contract",
+)
+
+parties = st.text_area(
+    "Parties",
+    placeholder=(
+        "Example:\n"
+        "Client: ABC Technologies Pvt. Ltd.\n"
+        "Freelancer: John Doe"
+    ),
+    height=120,
+)
+
+terms = st.text_area(
+    "Terms and Conditions",
+    placeholder=(
+        "Example:\n"
+        "Project: Website Development\n"
+        "Duration: 3 months\n"
+        "Payment: Rs. 50,000\n"
+        "Work Location: Remote\n"
+        "Confidentiality: Client information must remain confidential"
+    ),
+    height=220,
+)
+
+effective_date = st.date_input(
+    "Effective Date"
+)
+
+
+# Generate button
+if st.button(
+    "🚀 Generate Legal Document",
+    type="primary",
+    use_container_width=True,
+):
+
+    # Validate inputs
+    if not document_type.strip():
+        st.error("Please enter the Document Type.")
+        st.stop()
+
+    if not parties.strip():
+        st.error("Please enter the Parties.")
+        st.stop()
+
+    if not terms.strip():
+        st.error("Please enter the Terms and Conditions.")
+        st.stop()
+
+    effective_date_string = effective_date.strftime("%Y-%m-%d")
+
+    try:
+
+        with st.spinner("🤖 Generating your legal document..."):
+
+            generator = GeminiDocumentGenerator()
+
+            generated_text = generator.generate_document(
+                document_type=document_type.strip(),
+                parties=parties.strip(),
+                terms=terms.strip(),
+                effective_date=effective_date_string,
+            )
+
+        if not generated_text:
+            st.error("Gemini returned an empty document.")
+            st.stop()
+
+        st.session_state["generated_document"] = generated_text
+
+        st.success("✅ Legal document generated successfully!")
+
+    except Exception as exc:
+
+        st.error("❌ Document generation failed.")
+
+        st.error(str(exc))
+
+        st.stop()
+
+
+# Generated document section
+if "generated_document" in st.session_state:
+
+    st.divider()
+
+    st.header("📝 Generated Document")
+
+    edited_document = st.text_area(
+        "Edit Document",
+        value=st.session_state["generated_document"],
+        height=600,
     )
 
-    terms = st.text_area(
-        "Terms & Conditions",
-        height=180,
-        placeholder=(
-            "Use semicolons for separate terms.\n"
-            "Payment to be made within 30 days;\n"
-            "Confidentiality must be maintained;\n"
-            "Either party may terminate with 15 days notice"
-        ),
+    st.session_state["generated_document"] = edited_document
+
+    # Preview
+    st.subheader("👀 Preview")
+
+    preview_html = text_to_html(edited_document)
+
+    st.markdown(
+        f"""
+        <div style="
+            border: 1px solid #cccccc;
+            border-radius: 10px;
+            padding: 25px;
+            background-color: white;
+            color: black;
+            line-height: 1.7;
+        ">
+            {preview_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    effective_date = st.text_input(
-        "Effective Date",
-        placeholder="Example: October 1, 2026",
-    )
+    # Downloads
+    st.divider()
 
-    generate = st.button(
-        "✨ Generate Document",
-        type="primary",
-        use_container_width=True,
-    )
+    st.subheader("⬇️ Download Document")
 
-    if generate:
-        if not all(
-            value.strip()
-            for value in [document_type, parties, terms, effective_date]
-        ):
-            st.error("Please fill in all four fields.")
-        else:
-            payload = {
-                "document_type": document_type,
-                "parties": parties,
-                "terms": terms,
-                "effective_date": effective_date,
-            }
+    try:
 
-            try:
-                with st.spinner("Generating your document..."):
-                    response = requests.post(
-                        f"{BACKEND_URL}/generate",
-                        json=payload,
-                        timeout=120,
-                    )
-                response.raise_for_status()
-                result = response.json()
-                st.session_state["document"] = result["document"]
-                st.session_state["model"] = result.get("model", "")
-                st.session_state["mock"] = result.get("mock", False)
-                st.success("Document generated successfully.")
-            except requests.RequestException as exc:
-                st.error(
-                    "Could not connect to the FastAPI backend. "
-                    "Start the backend first and check BACKEND_URL."
-                )
-                st.caption(str(exc))
+        txt_data = format_txt(edited_document)
+        docx_data = format_docx(edited_document)
+        pdf_data = format_pdf(edited_document)
 
-with right:
-    st.subheader("Preview & Edit")
-
-    if "document" not in st.session_state:
-        st.markdown(
-            """
-            <div class="preview">
-                <p>Your generated document will appear here.</p>
-                <p>Fill in the details and click <b>Generate Document</b>.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        if st.session_state.get("mock"):
-            st.warning("Mock mode is active. This output was not generated by Gemini.")
-
-        model = html.escape(st.session_state.get("model", ""))
-        if model:
-            st.caption(f"Model: {model}")
-
-        st.markdown("**Editable document text**")
-        edited = st.text_area(
-            "Document",
-            value=st.session_state["document"],
-            height=530,
-            label_visibility="collapsed",
-        )
-        st.session_state["document"] = edited
-
-        st.markdown("**Formatted preview**")
-        preview_html = text_to_html(edited)
-        st.markdown(
-            f'<div class="preview">{preview_html}</div>',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("### Download")
         col1, col2, col3 = st.columns(3)
-
-        safe_name = (
-            "".join(c if c.isalnum() else "_" for c in document_type.strip())
-            or "LegalEase_Document"
-        )
 
         with col1:
             st.download_button(
-                "⬇️ TXT",
-                data=format_txt(edited),
-                file_name=f"{safe_name}.txt",
+                "📄 Download TXT",
+                data=txt_data,
+                file_name="LegalEase_Document.txt",
                 mime="text/plain",
                 use_container_width=True,
             )
 
         with col2:
             st.download_button(
-                "⬇️ DOCX",
-                data=format_docx(edited, document_type),
-                file_name=f"{safe_name}.docx",
+                "📝 Download DOCX",
+                data=docx_data,
+                file_name="LegalEase_Document.docx",
                 mime=(
                     "application/vnd.openxmlformats-officedocument."
                     "wordprocessingml.document"
@@ -228,14 +225,21 @@ with right:
 
         with col3:
             st.download_button(
-                "⬇️ PDF",
-                data=format_pdf(edited, document_type),
-                file_name=f"{safe_name}.pdf",
+                "📕 Download PDF",
+                data=pdf_data,
+                file_name="LegalEase_Document.pdf",
                 mime="application/pdf",
                 use_container_width=True,
             )
 
+    except Exception as exc:
+
+        st.error("Download preparation failed.")
+        st.error(str(exc))
+
+
 st.divider()
+
 st.caption(
-    "LegalEase • FastAPI backend • Streamlit frontend • Gemini AI • DOCX/PDF/TXT export"
+    "LegalEase © 2026 | AI-assisted legal document drafting tool"
 )
